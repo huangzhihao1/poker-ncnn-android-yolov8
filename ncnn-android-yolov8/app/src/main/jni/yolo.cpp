@@ -140,8 +140,10 @@ static void generate_grids_and_stride(const int target_w, const int target_h, st
 static void generate_proposals(std::vector<GridAndStride> grid_strides, const ncnn::Mat& pred, float prob_threshold, std::vector<Object>& objects)
 {
     const int num_points = grid_strides.size();
-    const int num_class = 80;
+    const int num_class = 52;
     const int reg_max_1 = 16;
+
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Generating proposals: num_points=%d, num_class=%d", num_points, num_class);
 
     for (int i = 0; i < num_points; i++)
     {
@@ -162,6 +164,8 @@ static void generate_proposals(std::vector<GridAndStride> grid_strides, const nc
         float box_prob = sigmoid(score);
         if (box_prob >= prob_threshold)
         {
+            __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Found object: label=%d, prob=%.2f", label, box_prob);
+
             ncnn::Mat bbox_pred(reg_max_1, 4, (void*)pred.row(i));
             {
                 ncnn::Layer* softmax = ncnn::create_layer("Softmax");
@@ -227,6 +231,8 @@ Yolo::Yolo()
 
 int Yolo::load(AAssetManager* mgr, const char* modeltype, int _target_size, const float* _mean_vals, const float* _norm_vals, bool use_gpu)
 {
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Loading model: %s", modeltype);
+    
     yolo.clear();
     blob_pool_allocator.clear();
     workspace_pool_allocator.clear();
@@ -246,11 +252,24 @@ int Yolo::load(AAssetManager* mgr, const char* modeltype, int _target_size, cons
 
     char parampath[256];
     char modelpath[256];
-    sprintf(parampath, "yolov8%s.param", modeltype);
-    sprintf(modelpath, "yolov8%s.bin", modeltype);
+    sprintf(parampath, "%s.param", modeltype);
+    sprintf(modelpath, "%s.bin", modeltype);
 
-    yolo.load_param(mgr, parampath);
-    yolo.load_model(mgr, modelpath);
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Loading param file: %s", parampath);
+    int ret = yolo.load_param(mgr, parampath);
+    if (ret != 0)
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "ncnn", "Failed to load param file: %d", ret);
+        return ret;
+    }
+
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Loading model file: %s", modelpath);
+    ret = yolo.load_model(mgr, modelpath);
+    if (ret != 0)
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "ncnn", "Failed to load model file: %d", ret);
+        return ret;
+    }
 
     target_size = _target_size;
     mean_vals[0] = _mean_vals[0];
@@ -260,11 +279,14 @@ int Yolo::load(AAssetManager* mgr, const char* modeltype, int _target_size, cons
     norm_vals[1] = _norm_vals[1];
     norm_vals[2] = _norm_vals[2];
 
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Model loaded successfully");
     return 0;
 }
 
 int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_threshold, float nms_threshold)
 {
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Starting detection on image %dx%d", rgb.cols, rgb.rows);
+    
     int width = rgb.cols;
     int height = rgb.rows;
 
@@ -285,7 +307,14 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
         w = w * scale;
     }
 
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Resized to %dx%d, scale=%.2f", w, h, scale);
+
     ncnn::Mat in = ncnn::Mat::from_pixels_resize(rgb.data, ncnn::Mat::PIXEL_RGB2BGR, width, height, w, h);
+    if (in.empty())
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "ncnn", "Failed to create input tensor");
+        return -1;
+    }
 
     // pad to target_size rectangle
     int wpad = (w + 31) / 32 * 32 - w;
@@ -293,21 +322,32 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
     ncnn::Mat in_pad;
     ncnn::copy_make_border(in, in_pad, hpad / 2, hpad - hpad / 2, wpad / 2, wpad - wpad / 2, ncnn::BORDER_CONSTANT, 0.f);
 
-    in_pad.substract_mean_normalize(0, norm_vals);
+    in_pad.substract_mean_normalize(mean_vals, norm_vals);
 
     ncnn::Extractor ex = yolo.create_extractor();
+    ex.set_light_mode(true);
+    ex.set_num_threads(4);
 
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Running inference");
     ex.input("images", in_pad);
 
-    std::vector<Object> proposals;
-    
     ncnn::Mat out;
-    ex.extract("output", out);
+    if (ex.extract("output0", out) != 0)
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "ncnn", "Failed to extract output");
+        return -1;
+    }
+
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Output tensor shape: %dx%dx%d", out.w, out.h, out.c);
+
+    std::vector<Object> proposals;
 
     std::vector<int> strides = {8, 16, 32}; // might have stride=64
     std::vector<GridAndStride> grid_strides;
     generate_grids_and_stride(in_pad.w, in_pad.h, strides, grid_strides);
     generate_proposals(grid_strides, out, prob_threshold, proposals);
+
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Generated %d proposals", (int)proposals.size());
 
     // sort all proposals by score from highest to lowest
     qsort_descent_inplace(proposals);
@@ -317,6 +357,7 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
     nms_sorted_bboxes(proposals, picked, nms_threshold);
 
     int count = picked.size();
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "After NMS: %d objects", count);
 
     objects.resize(count);
     for (int i = 0; i < count; i++)
@@ -341,31 +382,20 @@ int Yolo::detect(const cv::Mat& rgb, std::vector<Object>& objects, float prob_th
         objects[i].rect.height = y1 - y0;
     }
 
-    // sort objects by area
-    struct
-    {
-        bool operator()(const Object& a, const Object& b) const
-        {
-            return a.rect.area() > b.rect.area();
-        }
-    } objects_area_greater;
-    std::sort(objects.begin(), objects.end(), objects_area_greater);
-
     return 0;
 }
 
 int Yolo::draw(cv::Mat& rgb, const std::vector<Object>& objects)
 {
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Drawing %d objects", (int)objects.size());
+    
     static const char* class_names[] = {
-        "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-        "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-        "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-        "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-        "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-        "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-        "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-        "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-        "hair drier", "toothbrush"
+        "10C", "10D", "10H", "10S", "2C", "2D", "2H", "2S", "3C", "3D", 
+        "3H", "3S", "4C", "4D", "4H", "4S", "5C", "5D", "5H", "5S", 
+        "6C", "6D", "6H", "6S", "7C", "7D", "7H", "7S", "8C", "8D", 
+        "8H", "8S", "9C", "9D", "9H", "9S", "AC", "AD", "AH", "AS", 
+        "JC", "JD", "JH", "JS", "KC", "KD", "KH", "KS", "QC", "QD", 
+        "QH", "QS"
     };
 
     static const unsigned char colors[19][3] = {
@@ -396,8 +426,15 @@ int Yolo::draw(cv::Mat& rgb, const std::vector<Object>& objects)
     {
         const Object& obj = objects[i];
 
-//         fprintf(stderr, "%d = %.5f at %.2f %.2f %.2f x %.2f\n", obj.label, obj.prob,
-//                 obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height);
+        __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "Object %d: label=%d, prob=%.2f, rect=(%.2f,%.2f,%.2f,%.2f)", 
+            (int)i, obj.label, obj.prob,
+            obj.rect.x, obj.rect.y, obj.rect.width, obj.rect.height);
+
+        if (obj.label < 0 || obj.label >= sizeof(class_names)/sizeof(class_names[0]))
+        {
+            __android_log_print(ANDROID_LOG_ERROR, "ncnn", "Invalid label: %d", obj.label);
+            continue;
+        }
 
         const unsigned char* color = colors[color_index % 19];
         color_index++;

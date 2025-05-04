@@ -1,0 +1,23 @@
+                    Executable : D:\android-sdk_r24.4.1-windows\android-sdk-windows\cmake\3.10.2.4988404\bin\cmake.exe
+arguments : 
+-HC:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\src\main\jni
+-DCMAKE_SYSTEM_NAME=Android
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_SYSTEM_VERSION=24
+-DANDROID_PLATFORM=android-24
+-DANDROID_ABI=x86
+-DCMAKE_ANDROID_ARCH_ABI=x86
+-DANDROID_NDK=D:\android-sdk_r24.4.1-windows\android-sdk-windows\ndk\21.4.7075529
+-DCMAKE_ANDROID_NDK=D:\android-sdk_r24.4.1-windows\android-sdk-windows\ndk\21.4.7075529
+-DCMAKE_TOOLCHAIN_FILE=D:\android-sdk_r24.4.1-windows\android-sdk-windows\ndk\21.4.7075529\build\cmake\android.toolchain.cmake
+-DCMAKE_MAKE_PROGRAM=D:\android-sdk_r24.4.1-windows\android-sdk-windows\cmake\3.10.2.4988404\bin\ninja.exe
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\intermediates\cxx\RelWithDebInfo\251yp3x4\obj\x86
+-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\intermediates\cxx\RelWithDebInfo\251yp3x4\obj\x86
+-DCMAKE_BUILD_TYPE=RelWithDebInfo
+-BC:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\.cxx\RelWithDebInfo\251yp3x4\x86
+-GNinja
+jvmArgs : 
+
+
+                    Build command args: []
+                    Version: 2

@@ -1,19 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
-              android:layout_width="fill_parent"
-              android:layout_height="fill_parent">
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tvCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="0/52"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnClear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="清空" />
+    </LinearLayout>
+
+    <GridView
+        android:id="@+id/gridCards"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:numColumns="13"
+        android:verticalSpacing="8dp"
+        android:horizontalSpacing="8dp"
+        android:padding="8dp"
+        android:gravity="center" />
 
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content">
 
-    <Button
-        android:id="@+id/buttonSwitchCamera"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="切换摄像头" />
+        <Button
+            android:id="@+id/buttonSwitchCamera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="切换摄像头" />
+
+        <Button
+            android:id="@+id/viewResultsBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="查看记录" />
+
+        <Button
+            android:id="@+id/clearResultsBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="清空记录" />
+
+        <Button
+            android:id="@+id/viewLogBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="查看日志" />
+
+        <Button
+            android:id="@+id/clearAllBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="清空所有" />
 
     </LinearLayout>
 
@@ -22,21 +79,39 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content">
 
-    <Spinner
-        android:id="@+id/spinnerModel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:drawSelectorOnTop="true"
-        android:entries="@array/model_array" />
+        <Spinner
+            android:id="@+id/spinnerModel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawSelectorOnTop="true"
+            android:entries="@array/model_array" />
 
-    <Spinner
-        android:id="@+id/spinnerCPUGPU"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:drawSelectorOnTop="true"
-        android:entries="@array/cpugpu_array" />
+        <Spinner
+            android:id="@+id/spinnerCPUGPU"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawSelectorOnTop="true"
+            android:entries="@array/cpugpu_array" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/modelStatusText"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="模型状态: 未加载"
+        android:textColor="#FF0000"
+        android:padding="5dp"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/resultText"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="识别结果将显示在这里"
+        android:textColor="#000000"
+        android:padding="5dp"
+        android:gravity="center"/>
 
     <SurfaceView
         android:id="@+id/cameraview"

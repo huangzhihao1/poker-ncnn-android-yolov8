@@ -1,0 +1,22 @@
+com.tencent.yolov8ncnn
+array cpugpu_array
+array model_array
+id btnClear
+id buttonSwitchCamera
+id cameraview
+id clearAllBtn
+id clearResultsBtn
+id gridCards
+id modelStatusText
+id resultText
+id spinnerCPUGPU
+id spinnerModel
+id tvCardText
+id tvCount
+id tvEmoji
+id viewLogBtn
+id viewResultsBtn
+layout activity_record
+layout card_item
+layout main
+string app_name

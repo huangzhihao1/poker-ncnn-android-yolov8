@@ -1,0 +1,8 @@
+com.tencent.yolov8ncnn.app-pngs-0 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\generated\res\pngs\debug
+com.tencent.yolov8ncnn.app-resValues-1 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\generated\res\resValues\debug
+com.tencent.yolov8ncnn.app-rs-2 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\generated\res\rs\debug
+com.tencent.yolov8ncnn.app-mergeDebugResources-3 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\intermediates\incremental\debug\mergeDebugResources\merged.dir
+com.tencent.yolov8ncnn.app-mergeDebugResources-4 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\intermediates\incremental\debug\mergeDebugResources\stripped.dir
+com.tencent.yolov8ncnn.app-merged_res-5 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\build\intermediates\merged_res\debug
+com.tencent.yolov8ncnn.app-debug-6 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\src\debug\res
+com.tencent.yolov8ncnn.app-main-7 C:\Users\hzh\Desktop\test\ncnn-android-yolov8\ncnn-android-yolov8\app\src\main\res

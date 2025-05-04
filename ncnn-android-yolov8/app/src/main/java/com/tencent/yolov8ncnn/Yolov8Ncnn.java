@@ -16,6 +16,7 @@ package com.tencent.yolov8ncnn;
 
 import android.content.res.AssetManager;
 import android.view.Surface;
+import android.app.Activity;
 
 public class Yolov8Ncnn
 {
@@ -23,6 +24,7 @@ public class Yolov8Ncnn
     public native boolean openCamera(int facing);
     public native boolean closeCamera();
     public native boolean setOutputWindow(Surface surface);
+    public native void setActivity(Activity activity);
 
     static {
         System.loadLibrary("yolov8ncnn");

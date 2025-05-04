@@ -1,0 +1,10 @@
+#Mon May 05 04:23:52 CST 2025
+base.2=C\:\\Users\\hzh\\Desktop\\test\\ncnn-android-yolov8\\ncnn-android-yolov8\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\3\\classes.dex
+path.2=3/classes.dex
+base.1=C\:\\Users\\hzh\\Desktop\\test\\ncnn-android-yolov8\\ncnn-android-yolov8\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
+path.1=0/classes.dex
+base.0=C\:\\Users\\hzh\\Desktop\\test\\ncnn-android-yolov8\\ncnn-android-yolov8\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
+renamed.2=classes3.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex
+path.0=classes.dex

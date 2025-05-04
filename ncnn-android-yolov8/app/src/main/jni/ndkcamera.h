@@ -22,6 +22,7 @@
 #include <camera/NdkCameraManager.h>
 #include <camera/NdkCameraMetadata.h>
 #include <media/NdkImageReader.h>
+#include <jni.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -62,10 +63,15 @@ public:
     virtual ~NdkCameraWindow();
 
     void set_window(ANativeWindow* win);
+    void set_java_vm(JavaVM* vm);
+    void set_activity(JNIEnv* env, jobject activity);
 
     virtual void on_image_render(cv::Mat& rgb) const;
 
     virtual void on_image(const unsigned char* nv21, int nv21_width, int nv21_height) const;
+
+    JavaVM* getJavaVM() const { return java_vm; }
+    jobject getActivity() const { return activity_global; }
 
 public:
     mutable int accelerometer_orientation;
@@ -75,6 +81,8 @@ private:
     mutable ASensorEventQueue* sensor_event_queue;
     const ASensor* accelerometer_sensor;
     ANativeWindow* win;
+    JavaVM* java_vm;
+    jobject activity_global = nullptr;
 };
 
 #endif // NDKCAMERA_H

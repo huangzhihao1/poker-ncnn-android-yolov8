@@ -1,0 +1,28 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.tencent.yolov8ncnn.app-mergeDebugResources-3:/values/values.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\hzh\\Desktop\\test\\ncnn-android-yolov8\\ncnn-android-yolov8\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "6,3,2",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "188,104,55",
+                        "endLines": "9,5,2",
+                        "endColumns": "19,19,48",
+                        "endOffsets": "292,183,99"
+                    },
+                    "to": {
+                        "startLines": "2,6,9",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,164,248",
+                        "endLines": "5,8,9",
+                        "endColumns": "19,19,48",
+                        "endOffsets": "159,243,292"
+                    }
+                }
+            ]
+        }
+    ]
+}

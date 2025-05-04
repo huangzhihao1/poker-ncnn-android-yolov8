@@ -434,6 +434,8 @@ NdkCameraWindow::NdkCameraWindow() : NdkCamera()
     sensor_manager = ASensorManager_getInstance();
 
     accelerometer_sensor = ASensorManager_getDefaultSensor(sensor_manager, ASENSOR_TYPE_ACCELEROMETER);
+
+    java_vm = 0;
 }
 
 NdkCameraWindow::~NdkCameraWindow()
@@ -454,6 +456,14 @@ NdkCameraWindow::~NdkCameraWindow()
     {
         ANativeWindow_release(win);
     }
+
+    if (activity_global)
+    {
+        JNIEnv* env;
+        java_vm->GetEnv((void**)&env, JNI_VERSION_1_4);
+        env->DeleteGlobalRef(activity_global);
+        activity_global = 0;
+    }
 }
 
 void NdkCameraWindow::set_window(ANativeWindow* _win)
@@ -473,11 +483,27 @@ void NdkCameraWindow::on_image_render(cv::Mat& rgb) const
 
 void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv21_height) const
 {
+    // 检查输入参数
+    if (!nv21 || nv21_width <= 0 || nv21_height <= 0) {
+        __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", "Invalid input parameters");
+        return;
+    }
+
+    // 检查窗口是否有效
+    if (!win) {
+        __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", "Window is null");
+        return;
+    }
+
     // resolve orientation from camera_orientation and accelerometer_sensor
     {
         if (!sensor_event_queue)
         {
             sensor_event_queue = ASensorManager_createEventQueue(sensor_manager, ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS), NDKCAMERAWINDOW_ID, 0, 0);
+            if (!sensor_event_queue) {
+                __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", "Failed to create sensor event queue");
+                return;
+            }
 
             ASensorEventQueue_enableSensor(sensor_event_queue, accelerometer_sensor);
         }
@@ -499,7 +525,6 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
                 float acceleration_x = e[num_event - 1].acceleration.x;
                 float acceleration_y = e[num_event - 1].acceleration.y;
                 float acceleration_z = e[num_event - 1].acceleration.z;
-//                 __android_log_print(ANDROID_LOG_WARN, "NdkCameraWindow", "x = %f, y = %f, z = %f", x, y, z);
 
                 if (acceleration_y > 7)
                 {
@@ -538,12 +563,22 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
         int win_w = ANativeWindow_getWidth(win);
         int win_h = ANativeWindow_getHeight(win);
 
+        if (win_w <= 0 || win_h <= 0) {
+            __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", "Invalid window dimensions: win_w=%d, win_h=%d", win_w, win_h);
+            return;
+        }
+
+        __android_log_print(ANDROID_LOG_DEBUG, "NdkCameraWindow", "Window dimensions: win_w=%d, win_h=%d", win_w, win_h);
+        __android_log_print(ANDROID_LOG_DEBUG, "NdkCameraWindow", "Image dimensions: nv21_width=%d, nv21_height=%d", nv21_width, nv21_height);
+        __android_log_print(ANDROID_LOG_DEBUG, "NdkCameraWindow", "Camera orientation: camera_orientation=%d, accelerometer_orientation=%d", camera_orientation, accelerometer_orientation);
+
         if (accelerometer_orientation == 90 || accelerometer_orientation == 270)
         {
             std::swap(win_w, win_h);
         }
 
         const int final_orientation = (camera_orientation + accelerometer_orientation) % 360;
+        __android_log_print(ANDROID_LOG_DEBUG, "NdkCameraWindow", "Final orientation: %d", final_orientation);
 
         if (final_orientation == 0 || final_orientation == 180)
         {
@@ -569,25 +604,58 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
         }
         if (final_orientation == 90 || final_orientation == 270)
         {
-            if (win_w * nv21_width > win_h * nv21_height)
+            // 对于90/270度旋转,先计算原始ROI
+            if (win_w * nv21_height > win_h * nv21_width)
             {
-                roi_w = nv21_height;
-                roi_h = (nv21_height * win_h / win_w) / 2 * 2;
+                roi_w = nv21_width;
+                roi_h = (nv21_width * win_h / win_w) / 2 * 2;
                 roi_x = 0;
-                roi_y = ((nv21_width - roi_h) / 2) / 2 * 2;
+                roi_y = ((nv21_height - roi_h) / 2) / 2 * 2;
             }
             else
             {
-                roi_h = nv21_width;
-                roi_w = (nv21_width * win_w / win_h) / 2 * 2;
-                roi_x = ((nv21_height - roi_w) / 2) / 2 * 2;
+                roi_h = nv21_height;
+                roi_w = (nv21_height * win_w / win_h) / 2 * 2;
+                roi_x = ((nv21_width - roi_w) / 2) / 2 * 2;
                 roi_y = 0;
             }
 
-            nv21_roi_x = roi_y;
-            nv21_roi_y = roi_x;
-            nv21_roi_w = roi_h;
-            nv21_roi_h = roi_w;
+            // 交换ROI坐标和尺寸,确保是偶数
+            nv21_roi_x = (roi_y / 2) * 2;
+            nv21_roi_y = (roi_x / 2) * 2;
+            nv21_roi_w = (roi_h / 2) * 2;
+            nv21_roi_h = (roi_w / 2) * 2;
+
+            // 确保ROI在图像范围内
+            if (nv21_roi_x + nv21_roi_w > nv21_width)
+                nv21_roi_w = (nv21_width - nv21_roi_x) / 2 * 2;
+            if (nv21_roi_y + nv21_roi_h > nv21_height)
+                nv21_roi_h = (nv21_height - nv21_roi_y) / 2 * 2;
+        }
+        else
+        {
+            // 0/180度旋转使用原始ROI
+            nv21_roi_x = roi_x;
+            nv21_roi_y = roi_y;
+            nv21_roi_w = roi_w;
+            nv21_roi_h = roi_h;
+        }
+
+        // 添加详细的调试日志
+        __android_log_print(ANDROID_LOG_DEBUG, "NdkCameraWindow", 
+            "ROI计算: final_orientation=%d, roi_x=%d, roi_y=%d, roi_w=%d, roi_h=%d", 
+            final_orientation, roi_x, roi_y, roi_w, roi_h);
+        __android_log_print(ANDROID_LOG_DEBUG, "NdkCameraWindow", 
+            "NV21 ROI: nv21_roi_x=%d, nv21_roi_y=%d, nv21_roi_w=%d, nv21_roi_h=%d, nv21_width=%d, nv21_height=%d",
+            nv21_roi_x, nv21_roi_y, nv21_roi_w, nv21_roi_h, nv21_width, nv21_height);
+
+        // 检查ROI参数是否有效
+        if (nv21_roi_w <= 0 || nv21_roi_h <= 0 || nv21_roi_x < 0 || nv21_roi_y < 0 || 
+            nv21_roi_x + nv21_roi_w > nv21_width || nv21_roi_y + nv21_roi_h > nv21_height) {
+            __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", 
+                "无效的ROI参数: nv21_roi_x=%d, nv21_roi_y=%d, nv21_roi_w=%d, nv21_roi_h=%d, nv21_width=%d, nv21_height=%d", 
+                nv21_roi_x, nv21_roi_y, nv21_roi_w, nv21_roi_h, nv21_width, nv21_height);
+            return;
         }
 
         if (camera_facing == 0)
@@ -725,10 +793,19 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
     cv::Mat rgb_render(render_h, render_w, CV_8UC3);
     ncnn::kanna_rotate_c3(rgb.data, roi_w, roi_h, rgb_render.data, render_w, render_h, render_rotate_type);
 
+    // 检查渲染尺寸是否有效
+    if (render_w <= 0 || render_h <= 0) {
+        __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", "Invalid render dimensions");
+        return;
+    }
+
     ANativeWindow_setBuffersGeometry(win, render_w, render_h, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
 
     ANativeWindow_Buffer buf;
-    ANativeWindow_lock(win, &buf, NULL);
+    if (ANativeWindow_lock(win, &buf, NULL) != 0) {
+        __android_log_print(ANDROID_LOG_ERROR, "NdkCameraWindow", "Failed to lock window");
+        return;
+    }
 
     // scale to target size
     if (buf.format == AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM || buf.format == AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM)
@@ -753,7 +830,7 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
                 ptr += 24;
                 outptr += 32;
             }
-#endif // __ARM_NEON
+#endif
             for (; x < render_w; x++)
             {
                 outptr[0] = ptr[0];
@@ -768,4 +845,21 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
     }
 
     ANativeWindow_unlockAndPost(win);
+}
+
+void NdkCameraWindow::set_java_vm(JavaVM* vm)
+{
+    java_vm = vm;
+}
+
+void NdkCameraWindow::set_activity(JNIEnv* env, jobject activity)
+{
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "set_activity called, java_vm=%p, act=%p", java_vm, activity);
+    if (activity_global)
+    {
+        env->DeleteGlobalRef(activity_global);
+        __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "set_activity: DeleteGlobalRef old activity_global=%p", activity_global);
+    }
+    activity_global = env->NewGlobalRef(activity);
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "set_activity: NewGlobalRef success, activity_global=%p", activity_global);
 }

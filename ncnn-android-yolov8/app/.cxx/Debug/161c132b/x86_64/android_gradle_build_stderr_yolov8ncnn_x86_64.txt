@@ -1,0 +1,1 @@
+ninja: warning: bad deps log signature or version; starting over
